@@ -8,6 +8,7 @@ import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dar
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/compact_form_field.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/password_form_field.dart';
 import 'package:maruti_kirba_lighting_solutions/service/firebase_service.dart';
+import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 
 class ExecutiveMaster extends StatefulWidget {
   final String? executiveName;
@@ -24,6 +25,7 @@ class ExecutiveMaster extends StatefulWidget {
 
 class _ExecutiveMasterState extends State<ExecutiveMaster> {
   final FirebaseService firebaseService = FirebaseService();
+  final MysqlService mysqlService = MysqlService();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
@@ -33,6 +35,7 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
   bool _isSubmitting = false;
   bool _isEditing = false;
   bool _isLoading = false;
+  bool _isDatabaseInitialized = false;
 
   ExecutiveMasterData? _executiveMasterData;
   String? executiveNameFromArgs;
@@ -40,6 +43,7 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
   @override
   void initState() {
     super.initState();
+    _initializeDatabase();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is String) {
@@ -55,6 +59,79 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
         _fetchSupplierData(widget.executiveName!);
       }
     });
+  }
+
+  Future<void> _initializeDatabase() async {
+    try {
+      await mysqlService.initialize();
+      setState(() {
+        _isDatabaseInitialized = true;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        if (args is String) {
+          setState(() {
+            executiveNameFromArgs = args;
+            _isEditing = !widget.isDisplayMode;
+          });
+          _fetchExecutiveData(widget.executiveName!);
+        } else if (widget.executiveName != null) {
+          setState(() {
+            _isEditing = !widget.isDisplayMode;
+          });
+          _fetchExecutiveData(widget.executiveName!);
+        }
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error initializing database: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Database connection failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchExecutiveData(String executiveName) async {
+    if (!_isDatabaseInitialized) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final data = await mysqlService.getExecutiveByExecutiveName(
+        executiveName,
+      );
+
+      if (data != null) {
+        setState(() {
+          _executiveMasterData = data;
+          _nameController.text = data.executiveName;
+          _mobileController.text = data.mobileNumber;
+          _userIdController.text = data.email;
+          _passwordController.text = data.password;
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Executive not found')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading executive: $e')));
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchSupplierData(String executiveName) async {
@@ -95,7 +172,138 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
     }
   }
 
+  // Future<void> _submitForm() async {
+  //   if (_formKey.currentState!.validate()) {
+  //     setState(() {
+  //       _isSubmitting = true;
+  //     });
+
+  //     try {
+  //       final executiveData = ExecutiveMasterData(
+  //         executiveName: _nameController.text.trim(),
+  //         mobileNumber: _mobileController.text.trim(),
+  //         email: _userIdController.text.trim(),
+  //         password: _passwordController.text.trim(),
+  //         createdAt: _executiveMasterData?.createdAt ?? Timestamp.now(),
+  //       );
+
+  //       bool success;
+
+  //       if (_isEditing && _executiveMasterData != null) {
+  //         // update existing supplier
+  //         success = await firebaseService
+  //             .updateExecutiveMasterDataByExecutiveName(
+  //               _executiveMasterData!.executiveName,
+  //               executiveData,
+  //             );
+  //       } else {
+  //         // create new supplier - check if mobile number exists
+  //         final existingSupplier = await firebaseService
+  //             .getExecutiveByMobileNumber(executiveData.mobileNumber);
+
+  //         if (existingSupplier != null) {
+  //           if (mounted) {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               SnackBar(
+  //                 content: Text(
+  //                   'Executive ${executiveData.executiveName} with ${executiveData.mobileNumber} already exists.',
+  //                 ),
+  //                 backgroundColor: Colors.red,
+  //               ),
+  //             );
+  //           }
+  //           return;
+  //         }
+
+  //         // Also check if supplier name already exists
+  //         final existingExecutiveByName = await firebaseService
+  //             .getExecutiveByExecutiveName(executiveData.executiveName);
+
+  //         if (existingExecutiveByName != null) {
+  //           if (mounted) {
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               SnackBar(
+  //                 content: Text(
+  //                   'Executive ${executiveData.executiveName} already exists.',
+  //                 ),
+  //                 backgroundColor: Colors.red,
+  //               ),
+  //             );
+  //           }
+  //           return;
+  //         }
+
+  //         // create auth account first
+  //         final authService = AuthService();
+  //         await authService.createExecutiveAccount(
+  //           ExecutiveSignUpData(
+  //             email: executiveData.email,
+  //             password: executiveData.password,
+  //             name: executiveData.executiveName,
+  //             mobileNumber: executiveData.mobileNumber,
+  //           ),
+  //         );
+
+  //         success = await firebaseService.addExecutiveMasterData(executiveData);
+  //       }
+
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text(
+  //               success
+  //                   ? (_isEditing ? 'Executive updated!' : 'Executive created!')
+  //                   : 'Operation failed!',
+  //             ),
+  //             backgroundColor: success ? Colors.green : Colors.red,
+  //           ),
+  //         );
+
+  //         if (success) {
+  //           // clear all fields after successful save
+  //           _nameController.clear();
+  //           _mobileController.clear();
+  //           _userIdController.clear();
+  //           _passwordController.clear();
+  //           _executiveMasterData = null;
+  //           _formKey.currentState?.reset();
+
+  //           if (_isEditing) {
+  //             context.go('/cda_page', extra: 'executive');
+  //           }
+  //         }
+  //       }
+  //     } on AuthException catch (e) {
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+  //         );
+  //       }
+  //     } catch (e) {
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text('Error: ${e.toString()}'),
+  //             backgroundColor: Colors.red,
+  //           ),
+  //         );
+  //       }
+  //     } finally {
+  //       setState(() {
+  //         _isSubmitting = false;
+  //       });
+  //     }
+  //   }
+  // }
+
   Future<void> _submitForm() async {
+    if (!_isDatabaseInitialized) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Database not initialized')));
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isSubmitting = true;
@@ -107,24 +315,25 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
           mobileNumber: _mobileController.text.trim(),
           email: _userIdController.text.trim(),
           password: _passwordController.text.trim(),
-          createdAt: _executiveMasterData?.createdAt ?? Timestamp.now(),
+          createdAt:
+              _executiveMasterData?.createdAt ??
+              Timestamp.now(), // Changed from Timestamp
         );
 
         bool success;
 
         if (_isEditing && _executiveMasterData != null) {
-          // update existing supplier
-          success = await firebaseService
-              .updateExecutiveMasterDataByExecutiveName(
-                _executiveMasterData!.executiveName,
-                executiveData,
-              );
+          // update existing executive
+          success = await mysqlService.updateExecutiveMasterDataByExecutiveName(
+            _executiveMasterData!.executiveName,
+            executiveData,
+          );
         } else {
-          // create new supplier - check if mobile number exists
-          final existingSupplier = await firebaseService
+          // create new executive - check if mobile number exists
+          final existingExecutive = await mysqlService
               .getExecutiveByMobileNumber(executiveData.mobileNumber);
 
-          if (existingSupplier != null) {
+          if (existingExecutive != null) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -138,8 +347,8 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
             return;
           }
 
-          // Also check if supplier name already exists
-          final existingExecutiveByName = await firebaseService
+          // Also check if executive name already exists
+          final existingExecutiveByName = await mysqlService
               .getExecutiveByExecutiveName(executiveData.executiveName);
 
           if (existingExecutiveByName != null) {
@@ -156,7 +365,7 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
             return;
           }
 
-          // create auth account first
+          // create auth account first (if you're still using Firebase Auth)
           final authService = AuthService();
           await authService.createExecutiveAccount(
             ExecutiveSignUpData(
@@ -167,7 +376,7 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
             ),
           );
 
-          success = await firebaseService.addExecutiveMasterData(executiveData);
+          success = await mysqlService.addExecutiveMasterData(executiveData);
         }
 
         if (mounted) {
