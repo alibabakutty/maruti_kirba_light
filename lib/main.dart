@@ -6,8 +6,10 @@ import 'package:maruti_kirba_lighting_solutions/authentication/auth_provider.dar
 import 'package:maruti_kirba_lighting_solutions/authentication/auth_service.dart';
 import 'package:maruti_kirba_lighting_solutions/firebase_options.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/admin_dashboard.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/cda_page.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/admin_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_login.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/masters/executive_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/orders/order_master.dart';
 import 'package:provider/provider.dart';
 
@@ -84,6 +86,23 @@ final _router = GoRouter(
           builder: (context, state) => OrderMaster(
             authService: Provider.of<AuthService>(context, listen: false),
           ),
+        ),
+        GoRoute(
+          path: 'cda_page',
+          builder: (context, state) {
+            final masterType = state.extra as String;
+            return CdaPage(masterType: masterType);
+          },
+        ),
+        GoRoute(
+          path: 'executive_master',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>? ?? {};
+            return ExecutiveMaster(
+              executiveName: args['executiveName'],
+              isDisplayMode: args['isDisplayMode'] ?? false,
+            );
+          },
         ),
       ],
     ),
