@@ -1,6 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+     <!-- for Permission Handler -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Internet permission for Google Maps -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Add these new permissions for file storage -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- For Android 10+ -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+                     android:minSdkVersion="30" />
     <application
-        android:label="maruti_kirba_lighting_solutions"
+        android:label="Maruti Kirba"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
