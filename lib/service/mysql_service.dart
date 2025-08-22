@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mysql1/mysql1.dart';
 import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dart';
 
@@ -14,11 +15,20 @@ class MysqlService {
   // Initialize database connection
   Future<void> initialize() async {
     final settings = ConnectionSettings(
-      host: '10.0.2.2',
-      port: 3306,
-      user: 'root', // Replace with your MySQL username
-      password: r'Rup@@.123$', // Replace with your MySQL password
-      db: 'maruti_kirba_database', // Replace with your database name
+      host: dotenv.get('DB_HOST', fallback: '10.0.2.2'),
+      port: int.parse(dotenv.get('DB_PORT', fallback: '3306')),
+      user: dotenv.get(
+        'DB_USER',
+        fallback: 'root',
+      ), // Replace with your MySQL username
+      password: dotenv.get(
+        'DB_PASSWORD',
+        fallback: '',
+      ), // Replace with your MySQL password
+      db: dotenv.get(
+        'DB_NAME',
+        fallback: 'maruti_kirba_database',
+      ), // Replace with your database name
     );
 
     _connection = await MySqlConnection.connect(settings);
@@ -35,10 +45,15 @@ class MysqlService {
         mobile_number VARCHAR(15) NOT NULL UNIQUE,
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NULL
       )
     ''');
+  }
+
+  String _formatDateTime(DateTime dt) {
+    // Format as: YYYY-MM-DD HH:MM:SS
+    return dt.toIso8601String().substring(0, 19).replaceFirst('T', ' ');
   }
 
   // Add executive data to MySQL
@@ -47,12 +62,18 @@ class MysqlService {
   ) async {
     try {
       await _connection.query(
-        'INSERT INTO executive_master_data (executive_name, mobile_number, email, password) VALUES (?, ?, ?, ?)',
+        '''
+        INSERT INTO executive_master_data (executive_name, mobile_number, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+        ''',
         [
           executiveMasterData.executiveName,
           executiveMasterData.mobileNumber,
           executiveMasterData.email,
           executiveMasterData.password,
+          _formatDateTime(executiveMasterData.createdAt),
+          executiveMasterData.updatedAt != null
+              ? _formatDateTime(executiveMasterData.updatedAt!)
+              : null,
         ],
       );
       return true;
@@ -75,12 +96,13 @@ class MysqlService {
 
       if (results.isNotEmpty) {
         final row = results.first;
-        return ExecutiveMasterData.fromFetchFirestore({
+        return ExecutiveMasterData.fromFetchMySql({
           'executive_name': row['executive_name'],
           'mobile_number': row['mobile_number'],
           'email': row['email'],
           'password': row['password'],
           'created_at': row['created_at'],
+          'updated_at': row['updated_at'],
         });
       }
       return null;
@@ -103,12 +125,13 @@ class MysqlService {
 
       if (results.isNotEmpty) {
         final row = results.first;
-        return ExecutiveMasterData.fromFetchFirestore({
+        return ExecutiveMasterData.fromFetchMySql({
           'executive_name': row['executive_name'],
           'mobile_number': row['mobile_number'],
           'email': row['email'],
           'password': row['password'],
           'created_at': row['created_at'],
+          'updated_at': row['updated_at'],
         });
       }
       return null;
@@ -127,12 +150,13 @@ class MysqlService {
       );
 
       return results.map((row) {
-        return ExecutiveMasterData.fromFetchFirestore({
+        return ExecutiveMasterData.fromFetchMySql({
           'executive_name': row['executive_name'],
           'mobile_number': row['mobile_number'],
           'email': row['email'],
           'password': row['password'],
           'created_at': row['created_at'],
+          'updated_at': row['updated_at'],
         });
       }).toList();
     } catch (e) {
@@ -163,13 +187,14 @@ class MysqlService {
       // Update the record
       final result = await _connection.query(
         '''UPDATE executive_master_data 
-           SET executive_name = ?, mobile_number = ?, email = ?, password = ?
+           SET executive_name = ?, mobile_number = ?, email = ?, password = ?, updated_at = ?
            WHERE executive_name = ?''',
         [
           updatedData.executiveName,
           updatedData.mobileNumber,
           updatedData.email,
           updatedData.password,
+          _formatDateTime(DateTime.now()),
           oldExecutiveName,
         ],
       );
@@ -203,13 +228,14 @@ class MysqlService {
       // Update the record
       final result = await _connection.query(
         '''UPDATE executive_master_data 
-           SET executive_name = ?, mobile_number = ?, email = ?, password = ?
+           SET executive_name = ?, mobile_number = ?, email = ?, password = ?, updated_at = ?
            WHERE mobile_number = ?''',
         [
           updatedData.executiveName,
           updatedData.mobileNumber,
           updatedData.email,
           updatedData.password,
+          _formatDateTime(DateTime.now()),
           oldMobileNumber,
         ],
       );

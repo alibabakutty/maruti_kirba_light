@@ -19,7 +19,6 @@ class _OrderMasterState extends State<OrderMaster> {
   final _formKey = GlobalKey<FormState>();
   // final _customerNameController = TextEditingController();
   final _quantityController = TextEditingController();
-  late FocusNode _customerFocusNode = FocusNode();
 
   // final FirebaseService _firebaseService = FirebaseService();
   // List<CustomerMasterData> _allCustomers = [];
@@ -55,8 +54,7 @@ class _OrderMasterState extends State<OrderMaster> {
   @override
   void initState() {
     super.initState();
-    // Initialize the focus node
-    _customerFocusNode = FocusNode();
+
     // _loadOrderCounter();
     _fetchUserData();
     // _loadAllCustomers();
@@ -65,11 +63,7 @@ class _OrderMasterState extends State<OrderMaster> {
     // Request focus on customer field after a short delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted &&
-            _customerFocusNode.canRequestFocus &&
-            !_hasShownNotification) {
-          _customerFocusNode.requestFocus();
-
+        if (mounted && !_hasShownNotification) {
           // show notification message after focusing
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -677,7 +671,6 @@ class _OrderMasterState extends State<OrderMaster> {
   @override
   void dispose() {
     _quantityController.dispose();
-    _customerFocusNode.dispose();
     super.dispose();
   }
 }

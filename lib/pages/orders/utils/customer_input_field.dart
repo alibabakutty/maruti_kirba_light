@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 class CustomerInputField extends StatefulWidget {
   final TextEditingController controller;
-  final FocusNode focusNode;
   final String label;
   final String? hint;
   final TextInputType? keyboardType;
@@ -17,7 +16,6 @@ class CustomerInputField extends StatefulWidget {
   const CustomerInputField({
     super.key,
     required this.controller,
-    required this.focusNode,
     required this.label,
     this.hint,
     this.keyboardType,
@@ -35,14 +33,12 @@ class CustomerInputField extends StatefulWidget {
 }
 
 class _CustomerInputFieldState extends State<CustomerInputField> {
-  late FocusNode _customerSearchFocusNode;
   late TextEditingController _searchController;
   // CustomerMasterData? _selectedCustomer;
 
   @override
   void initState() {
     super.initState();
-    _customerSearchFocusNode = FocusNode();
     _searchController = TextEditingController();
   }
 
@@ -56,7 +52,6 @@ class _CustomerInputFieldState extends State<CustomerInputField> {
 
   @override
   void dispose() {
-    _customerSearchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -117,7 +112,6 @@ class _CustomerInputFieldState extends State<CustomerInputField> {
   //   return SizedBox(
   //     height: 30,
   //     child: RawAutocomplete<CustomerMasterData>(
-  //       focusNode: _customerSearchFocusNode,
   //       textEditingController: _searchController,
   //       optionsBuilder: (TextEditingValue textEditingValue) {
   //         if (widget.isLoadingCustomers) return const Iterable.empty();
@@ -132,12 +126,11 @@ class _CustomerInputFieldState extends State<CustomerInputField> {
   //         });
   //       },
   //       onSelected: _handleCustomerSelected,
-  //       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+  //       fieldViewBuilder: (context, controller, onFieldSubmitted) {
   //         return SizedBox(
   //           height: 30,
   //           child: TextFormField(
   //             controller: controller,
-  //             focusNode: focusNode,
   //             decoration: InputDecoration(
   //               hintText: widget.hint ?? '',
   //               isDense: true,
@@ -219,7 +212,6 @@ class _CustomerInputFieldState extends State<CustomerInputField> {
   //     height: 30,
   //     child: TextFormField(
   //       controller: widget.controller,
-  //       focusNode: widget.focusNode,
   //       readOnly: true,
   //       decoration: InputDecoration(
   //         isDense: true,

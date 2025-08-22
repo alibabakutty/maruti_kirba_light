@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_kirba_lighting_solutions/auth_redirect.dart';
 import 'package:maruti_kirba_lighting_solutions/authentication/auth_provider.dart';
@@ -7,14 +8,31 @@ import 'package:maruti_kirba_lighting_solutions/authentication/auth_service.dart
 import 'package:maruti_kirba_lighting_solutions/firebase_options.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/admin_dashboard.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/cda_page.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/display_fetch_pages.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/update_fetch_pages.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/admin_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/executive_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/orders/order_master.dart';
 import 'package:provider/provider.dart';
 
+// Helper function to load environment variables
+Future<void> _loadEnvVariables() async {
+  try {
+    await dotenv.load(fileName: "assets/.env"); // Updated path and method
+    // ignore: avoid_print
+    print("Environment variables loaded successfully");
+  } catch (e) {
+    // ignore: avoid_print
+    print("Warning: Could not load .env file: $e");
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await _loadEnvVariables();
 
   await Future.wait([
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
@@ -95,11 +113,25 @@ final _router = GoRouter(
           },
         ),
         GoRoute(
+          path: 'display_fetch',
+          builder: (context, state) {
+            final masterType = state.extra as String;
+            return DisplayFetchPage(masterType: masterType);
+          },
+        ),
+        GoRoute(
+          path: 'update_fetch',
+          builder: (context, state) {
+            final masterType = state.extra as String;
+            return UpdateFetchPages(masterType: masterType);
+          },
+        ),
+        GoRoute(
           path: 'executive_master',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>? ?? {};
             return ExecutiveMaster(
-              executiveName: args['executiveName'],
+              executiveName: args['executive_name'],
               isDisplayMode: args['isDisplayMode'] ?? false,
             );
           },

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_kirba_lighting_solutions/authentication/auth_exception.dart';
@@ -7,7 +6,6 @@ import 'package:maruti_kirba_lighting_solutions/authentication/auth_service.dart
 import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/compact_form_field.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/password_form_field.dart';
-import 'package:maruti_kirba_lighting_solutions/service/firebase_service.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 
 class ExecutiveMaster extends StatefulWidget {
@@ -24,7 +22,7 @@ class ExecutiveMaster extends StatefulWidget {
 }
 
 class _ExecutiveMasterState extends State<ExecutiveMaster> {
-  final FirebaseService firebaseService = FirebaseService();
+  // final FirebaseService firebaseService = FirebaseService();
   final MysqlService mysqlService = MysqlService();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
@@ -51,12 +49,12 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
           executiveNameFromArgs = args;
           _isEditing = !widget.isDisplayMode;
         });
-        _fetchSupplierData(widget.executiveName!);
+        _fetchExecutiveData(widget.executiveName!);
       } else if (widget.executiveName != null) {
         setState(() {
           _isEditing = !widget.isDisplayMode;
         });
-        _fetchSupplierData(widget.executiveName!);
+        _fetchExecutiveData(widget.executiveName!);
       }
     });
   }
@@ -134,43 +132,43 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
     }
   }
 
-  Future<void> _fetchSupplierData(String executiveName) async {
-    setState(() {
-      _isLoading = true;
-    });
+  // Future<void> _fetchSupplierData(String executiveName) async {
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
 
-    try {
-      final data = await firebaseService.getExecutiveByExecutiveName(
-        executiveName,
-      );
+  //   try {
+  //     final data = await firebaseService.getExecutiveByExecutiveName(
+  //       executiveName,
+  //     );
 
-      if (data != null) {
-        setState(() {
-          _executiveMasterData = data;
-          _nameController.text = data.executiveName;
-          _mobileController.text = data.mobileNumber;
-          _userIdController.text = data.email;
-          _passwordController.text = data.password;
-        });
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Executive not found')));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading executive: $e')));
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
+  //     if (data != null) {
+  //       setState(() {
+  //         _executiveMasterData = data;
+  //         _nameController.text = data.executiveName;
+  //         _mobileController.text = data.mobileNumber;
+  //         _userIdController.text = data.email;
+  //         _passwordController.text = data.password;
+  //       });
+  //     } else {
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(
+  //           context,
+  //         ).showSnackBar(const SnackBar(content: Text('Executive not found')));
+  //       }
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text('Error loading executive: $e')));
+  //     }
+  //   } finally {
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //   }
+  // }
 
   // Future<void> _submitForm() async {
   //   if (_formKey.currentState!.validate()) {
@@ -317,7 +315,8 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
           password: _passwordController.text.trim(),
           createdAt:
               _executiveMasterData?.createdAt ??
-              Timestamp.now(), // Changed from Timestamp
+              DateTime.now(), // Changed from Timestamp
+          updatedAt: DateTime.now(),
         );
 
         bool success;
