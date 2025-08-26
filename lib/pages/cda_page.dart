@@ -43,9 +43,9 @@ class CdaPage extends StatelessWidget {
                     case 'executive':
                       context.go('/executive_master');
                       break;
-                    case 'customer':
-                      context.go('/customer_master');
-                      break;
+                    // case 'customer':
+                    //   context.go('/customer_master');
+                    //   break;
                     default:
                   }
                 },

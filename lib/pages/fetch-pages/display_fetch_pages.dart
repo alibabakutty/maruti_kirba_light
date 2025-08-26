@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
+import 'package:provider/provider.dart';
 
 class DisplayFetchPage extends StatefulWidget {
   final String masterType;
@@ -23,12 +24,12 @@ class _DisplayFetchPageState extends State<DisplayFetchPage> {
   bool hasFetchedExecutives = false;
   bool hasFetchedCustomers = false;
 
-  final MysqlService _mysqlService = MysqlService();
+  // final MysqlService _mysqlService = MysqlService();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPersistentFrameCallback((_) {
       _loadData();
     });
   }
@@ -92,7 +93,8 @@ class _DisplayFetchPageState extends State<DisplayFetchPage> {
 
   Future<void> _fetchExecutives() async {
     try {
-      final List<ExecutiveMasterData> executiveList = await _mysqlService
+      final mysqlService = Provider.of<MysqlService>(context, listen: false);
+      final List<ExecutiveMasterData> executiveList = await mysqlService
           .getAllExecutives();
 
       if (!mounted) return;

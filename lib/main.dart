@@ -14,6 +14,7 @@ import 'package:maruti_kirba_lighting_solutions/pages/login-pages/admin_login.da
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/executive_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/orders/order_master.dart';
+import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 import 'package:provider/provider.dart';
 
 // Helper function to load environment variables
@@ -34,6 +35,10 @@ void main() async {
   // Load environment variables
   await _loadEnvVariables();
 
+  // Initialize MySql service first
+  final mysqlService = MysqlService();
+  await mysqlService.initialize();
+
   await Future.wait([
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
   ]);
@@ -43,6 +48,7 @@ void main() async {
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (context) => AuthProvider()),
+        Provider<MysqlService>(create: (_) => mysqlService),
       ],
       child: const MarutiKirbaApp(),
     ),

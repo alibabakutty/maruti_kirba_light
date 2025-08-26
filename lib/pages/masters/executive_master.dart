@@ -7,6 +7,7 @@ import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dar
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/compact_form_field.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/password_form_field.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
+import 'package:provider/provider.dart';
 
 class ExecutiveMaster extends StatefulWidget {
   final String? executiveName;
@@ -23,7 +24,7 @@ class ExecutiveMaster extends StatefulWidget {
 
 class _ExecutiveMasterState extends State<ExecutiveMaster> {
   // final FirebaseService firebaseService = FirebaseService();
-  final MysqlService mysqlService = MysqlService();
+  // final MysqlService mysqlService = MysqlService();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
@@ -33,7 +34,6 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
   bool _isSubmitting = false;
   bool _isEditing = false;
   bool _isLoading = false;
-  bool _isDatabaseInitialized = false;
 
   ExecutiveMasterData? _executiveMasterData;
   String? executiveNameFromArgs;
@@ -41,7 +41,6 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
   @override
   void initState() {
     super.initState();
-    _initializeDatabase();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is String) {
@@ -59,47 +58,13 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
     });
   }
 
-  Future<void> _initializeDatabase() async {
-    try {
-      await mysqlService.initialize();
-      setState(() {
-        _isDatabaseInitialized = true;
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final args = ModalRoute.of(context)?.settings.arguments;
-        if (args is String) {
-          setState(() {
-            executiveNameFromArgs = args;
-            _isEditing = !widget.isDisplayMode;
-          });
-          _fetchExecutiveData(widget.executiveName!);
-        } else if (widget.executiveName != null) {
-          setState(() {
-            _isEditing = !widget.isDisplayMode;
-          });
-          _fetchExecutiveData(widget.executiveName!);
-        }
-      });
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error initializing database: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Database connection failed: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _fetchExecutiveData(String executiveName) async {
-    if (!_isDatabaseInitialized) return;
-
     setState(() {
       _isLoading = true;
     });
 
     try {
+      final mysqlService = Provider.of<MysqlService>(context, listen: false);
       final data = await mysqlService.getExecutiveByExecutiveName(
         executiveName,
       );
@@ -295,19 +260,13 @@ class _ExecutiveMasterState extends State<ExecutiveMaster> {
   // }
 
   Future<void> _submitForm() async {
-    if (!_isDatabaseInitialized) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Database not initialized')));
-      return;
-    }
-
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isSubmitting = true;
       });
 
       try {
+        final mysqlService = Provider.of<MysqlService>(context, listen: false);
         final executiveData = ExecutiveMasterData(
           executiveName: _nameController.text.trim(),
           mobileNumber: _mobileController.text.trim(),
