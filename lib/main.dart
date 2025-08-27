@@ -12,7 +12,9 @@ import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/display_fetch_
 import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/update_fetch_pages.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/admin_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_login.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/masters/customer_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/executive_master.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/masters/item_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/orders/order_master.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 import 'package:provider/provider.dart';
@@ -138,6 +140,26 @@ final _router = GoRouter(
             final args = state.extra as Map<String, dynamic>? ?? {};
             return ExecutiveMaster(
               executiveName: args['executive_name'],
+              isDisplayMode: args['isDisplayMode'] ?? false,
+            );
+          },
+        ),
+        GoRoute(
+          path: 'customer_master',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>? ?? {};
+            return CustomerMaster(
+              customerName: args['customer_name'],
+              isDisplayMode: args['isDisplayMode'] ?? false,
+            );
+          },
+        ),
+        GoRoute(
+          path: 'item_master',
+          builder: (context, state) {
+            final args = state.extra as Map<String, dynamic>? ?? {};
+            return ItemMaster(
+              itemName: args['item_name'],
               isDisplayMode: args['isDisplayMode'] ?? false,
             );
           },

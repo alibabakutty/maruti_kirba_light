@@ -15,7 +15,7 @@ class ExecutiveMasterData {
     this.updatedAt,
   });
 
-  // convert data from firestore to ExecutiveName Master object
+  // convert data from MySql to ExecutiveName Master object
   factory ExecutiveMasterData.fromFetchMySql(Map<String, dynamic> data) {
     return ExecutiveMasterData(
       executiveName: data['executive_name'] ?? '',
@@ -31,7 +31,7 @@ class ExecutiveMasterData {
     );
   }
 
-  // convert Executive Master Master Data object to firestore data
+  // convert Executive Master Master Data object to MySql data
   Map<String, dynamic> toStoreMySql() {
     return {
       'executive_name': executiveName,

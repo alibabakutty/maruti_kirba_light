@@ -120,7 +120,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 children: [
                   // Header
                   const Text(
-                    'Light Order Management',
+                    'Maruti Kirba Order Management',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -128,7 +128,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ),
                   const Text(
-                    'Control your Light Order Management',
+                    'Control your Lights Order Management',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 5),

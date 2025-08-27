@@ -1,7 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maruti_kirba_lighting_solutions/models/customer_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dart';
+import 'package:maruti_kirba_lighting_solutions/models/item_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 import 'package:provider/provider.dart';
 
@@ -15,16 +16,14 @@ class UpdateFetchPages extends StatefulWidget {
 }
 
 class _DisplayFetchPageState extends State<UpdateFetchPages> {
-  List<Map<String, dynamic>> items = [];
+  List<ItemMasterData> items = [];
   List<ExecutiveMasterData> executives = [];
-  List<Map<String, dynamic>> customers = [];
+  List<CustomerMasterData> customers = [];
 
   bool isLoading = false;
   bool hasFetchedItems = false;
   bool hasFetchedExecutives = false;
   bool hasFetchedCustomers = false;
-
-  // final MysqlService _mysqlService = MysqlService();
 
   @override
   void initState() {
@@ -64,27 +63,18 @@ class _DisplayFetchPageState extends State<UpdateFetchPages> {
 
   Future<void> _fetchItems() async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('item_master_data')
-          .get();
+      final mysqlService = Provider.of<MysqlService>(context, listen: false);
+      final List<ItemMasterData> itemList = await mysqlService.getAllItems();
 
       if (!mounted) return;
 
       setState(() {
-        items = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return {
-            'code': data['item_code'] as int? ?? 0, // Now first
-            'name': data['item_name'] as String? ?? '', // Now second
-            'uom': data['uom'] as String? ?? 'Nos', // Add this field
-            'amount': data['item_rate_amount'] as double? ?? 0.0,
-            'status': data['item_status'] as bool? ?? false,
-          };
-        }).toList();
+        items = itemList;
         hasFetchedItems = true;
       });
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching items: $e')));
@@ -114,25 +104,19 @@ class _DisplayFetchPageState extends State<UpdateFetchPages> {
 
   Future<void> _fetchCustomers() async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('customer_master_data')
-          .get();
+      final mysqlService = Provider.of<MysqlService>(context, listen: false);
+      final List<CustomerMasterData> customerList = await mysqlService
+          .getAllCustomers();
 
       if (!mounted) return;
 
       setState(() {
-        customers = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return {
-            'name': data['customer_name'] as String? ?? '',
-            'mobile': data['mobile_number'] as String? ?? '',
-            'email': data['email'] as String? ?? '',
-          };
-        }).toList();
+        customers = customerList;
         hasFetchedCustomers = true;
       });
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching customers: $e')));
@@ -144,7 +128,7 @@ class _DisplayFetchPageState extends State<UpdateFetchPages> {
       case 'item':
         context.go(
           '/item_master',
-          extra: {'itemName': value, 'isDisplayMode': false},
+          extra: {'item_name': value, 'isDisplayMode': false},
         );
         break;
       case 'executive':
@@ -200,9 +184,21 @@ class _DisplayFetchPageState extends State<UpdateFetchPages> {
   Widget _buildContent() {
     switch (widget.masterType) {
       case 'item':
+        // Convert ItemMasterData list to map list
+        final itemMaps = items
+            .map(
+              (item) => {
+                'code': item.itemCode,
+                'name': item.itemName,
+                'uom': item.uom,
+                'amount': item.totalAmount,
+                'status': item.itemStatus,
+              },
+            )
+            .toList();
         return _buildMasterList(
           header: const ['Code', 'Item Name', 'UOM', 'Rate'],
-          data: items,
+          data: itemMaps,
           nameKey: 'name',
           secondaryKey: 'code',
           tertiaryKey: 'uom',
@@ -230,9 +226,19 @@ class _DisplayFetchPageState extends State<UpdateFetchPages> {
           icon: Icons.business,
         );
       case 'customer':
+        // Convert CustomerMasterData list to map list
+        final customerMaps = customers
+            .map(
+              (customer) => {
+                'name': customer.customerName,
+                'mobile': customer.mobileNumber,
+                'email': customer.email,
+              },
+            )
+            .toList();
         return _buildMasterList(
           header: const ['Customer Name', 'Mobile', 'Email'],
-          data: customers,
+          data: customerMaps,
           nameKey: 'name',
           secondaryKey: 'mobile',
           tertiaryKey: 'email',
