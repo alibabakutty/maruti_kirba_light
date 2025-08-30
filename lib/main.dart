@@ -10,6 +10,9 @@ import 'package:maruti_kirba_lighting_solutions/pages/admin_dashboard.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/cda_page.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/display_fetch_pages.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/fetch-pages/update_fetch_pages.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/import/import_customer.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/import/import_item.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/import/import_main.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/admin_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_login.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/customer_master.dart';
@@ -22,7 +25,7 @@ import 'package:provider/provider.dart';
 // Helper function to load environment variables
 Future<void> _loadEnvVariables() async {
   try {
-    await dotenv.load(fileName: "assets/.env"); // Updated path and method
+    await dotenv.load(fileName: "assets/.env");
     // ignore: avoid_print
     print("Environment variables loaded successfully");
   } catch (e) {
@@ -34,27 +37,91 @@ Future<void> _loadEnvVariables() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await _loadEnvVariables();
+  // Disable debug prints in release mode for better performance
+  if (const bool.fromEnvironment('dart.vm.product')) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
-  // Initialize MySql service first
-  final mysqlService = MysqlService();
-  await mysqlService.initialize();
+  try {
+    // Load environment variables
+    await _loadEnvVariables();
 
-  await Future.wait([
-    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
-  ]);
+    // Initialize Firebase first
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+      // ignore: body_might_complete_normally_catch_error
+    ).catchError((error) {
+      // ignore: avoid_print
+      print("Firebase initialization error: $error");
+    });
 
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<AuthService>(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
-        Provider<MysqlService>(create: (_) => mysqlService),
-      ],
-      child: const MarutiKirbaApp(),
-    ),
-  );
+    // Create MySQL service but initialize it asynchronously without blocking
+    final mysqlService = MysqlService();
+
+    // Initialize MySQL in background without blocking app startup
+    // Use unawaited to prevent waiting for completion
+    Future.microtask(() async {
+      try {
+        await mysqlService.initialize();
+        // ignore: avoid_print
+        print("MySQL initialized successfully in background");
+      } catch (error) {
+        // ignore: avoid_print
+        print("MySQL background initialization error: $error");
+      }
+    });
+
+    runApp(
+      MultiProvider(
+        providers: [
+          Provider<AuthService>(create: (_) => AuthService()),
+          ChangeNotifierProvider(create: (context) => AuthProvider()),
+          Provider<MysqlService>(create: (_) => mysqlService),
+        ],
+        child: const MarutiKirbaApp(),
+      ),
+    );
+  } catch (e) {
+    // ignore: avoid_print
+    print("Fatal error during initialization: $e");
+    // You could show an error screen here
+    runApp(const ErrorApp());
+  }
+}
+
+// Simple error widget in case of initialization failure
+class ErrorApp extends StatelessWidget {
+  const ErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'App Initialization Failed',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Please check your internet connection and try again.',
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () {
+                  // You could implement a restart mechanism here
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 final _router = GoRouter(
@@ -164,11 +231,37 @@ final _router = GoRouter(
             );
           },
         ),
+        GoRoute(
+          path: 'import_main',
+          builder: (context, state) => const ImportMain(),
+        ),
+        GoRoute(
+          path: 'import_item',
+          builder: (context, state) => const ImportItem(),
+        ),
+        GoRoute(
+          path: 'import_customer',
+          builder: (context, state) => const ImportCustomer(),
+        ),
       ],
     ),
   ],
-  errorBuilder: (context, state) =>
-      Scaffold(body: Center(child: Text('Error: ${state.error}'))),
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Error occurred'),
+          Text('Details: ${state.error}'),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => context.go('/'),
+            child: const Text('Go Home'),
+          ),
+        ],
+      ),
+    ),
+  ),
 );
 
 class MarutiKirbaApp extends StatelessWidget {

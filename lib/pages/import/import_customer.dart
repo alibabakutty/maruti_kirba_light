@@ -371,3 +371,4 @@ Total processed: ${table.rows.length - 1}''';
     );
   }
 }
+

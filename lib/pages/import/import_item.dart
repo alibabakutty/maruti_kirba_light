@@ -360,3 +360,4 @@ Total: ${table.rows.length - 1}''';
     );
   }
 }
+
