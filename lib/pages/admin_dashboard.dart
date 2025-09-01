@@ -218,6 +218,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   const SizedBox(height: 5),
 
+                  _buildMasterCard(
+                    context,
+                    title: 'MySQL Connection Test',
+                    subtitle: 'Check MySQL connectivity',
+                    icon: Icons.cloud_outlined,
+                    color: Colors.brown.shade700,
+                    onTap: () {
+                      context.go('/mysql_test');
+                    },
+                  ),
+                  const SizedBox(height: 5),
+
                   // Spacer to push content up
                   const Spacer(),
 

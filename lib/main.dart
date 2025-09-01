@@ -18,6 +18,7 @@ import 'package:maruti_kirba_lighting_solutions/pages/login-pages/executive_logi
 import 'package:maruti_kirba_lighting_solutions/pages/masters/customer_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/executive_master.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/item_master.dart';
+import 'package:maruti_kirba_lighting_solutions/pages/mysql-connection-test/mysql_test.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/orders/order_master.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 import 'package:provider/provider.dart';
@@ -242,6 +243,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'import_customer',
           builder: (context, state) => const ImportCustomer(),
+        ),
+        GoRoute(
+          path: 'mysql_test',
+          builder: (context, state) => const MysqlTest(),
         ),
       ],
     ),

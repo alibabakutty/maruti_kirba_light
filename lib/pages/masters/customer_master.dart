@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_kirba_lighting_solutions/models/customer_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/pages/masters/utils/compact_form_field.dart';
-import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
-import 'package:provider/provider.dart';
+import 'package:maruti_kirba_lighting_solutions/service/api_service.dart'; // Import the API service
 
 class CustomerMaster extends StatefulWidget {
   final String? customerName;
@@ -55,16 +54,31 @@ class _CustomerMasterState extends State<CustomerMaster> {
   Future<void> _fetchCustomerData(String customerName) async {
     setState(() => _isLoading = true);
     try {
-      final mysqlService = Provider.of<MysqlService>(context, listen: false);
-      final data = await mysqlService.getCustomerByCustomerName(customerName);
+      print('Fetching data for customer: $customerName');
+      // Use ApiService instead of MysqlService
+      final data = await ApiService.getCustomerByCustomerName(customerName);
+      print('API Response for $customerName: $data');
       if (data != null) {
-        setState(() {
-          _customerMasterData = data;
-          _customerCodeController.text = data.customerCode;
-          _customerNameController.text = data.customerName;
-          _mobileNumberController.text = data.mobileNumber ?? '';
-          _emailController.text = data.email ?? '';
-        });
+        if (data is Map<String, dynamic>) {
+          // Convert API response to CustomerMasterData
+          // Convert API response to CustomerMasterData
+          setState(() {
+            _customerMasterData = CustomerMasterData.fromJson({
+              'id': data['id'],
+              'customer_code': data['customerCode'] ?? data['customer_code'],
+              'customer_name': data['customerName'] ?? data['customer_name'],
+              'mobile_number': data['mobileNumber'] ?? data['mobile_number'],
+              'email': data['email'],
+              'created_at': data['createdAt'] ?? data['created_at'],
+              'updated_at': data['updatedAt'] ?? data['updated_at'],
+            });
+            _customerCodeController.text = _customerMasterData!.customerCode;
+            _customerNameController.text = _customerMasterData!.customerName;
+            _mobileNumberController.text =
+                _customerMasterData!.mobileNumber ?? '';
+            _emailController.text = _customerMasterData!.email ?? '';
+          });
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(
@@ -87,9 +101,10 @@ class _CustomerMasterState extends State<CustomerMaster> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
+
     try {
-      final mysqlService = Provider.of<MysqlService>(context, listen: false);
       final customerData = CustomerMasterData(
+        id: _isEditing ? _customerMasterData!.id : null,
         customerCode: _customerCodeController.text,
         customerName: _customerNameController.text,
         mobileNumber: _mobileNumberController.text,
@@ -98,18 +113,29 @@ class _CustomerMasterState extends State<CustomerMaster> {
         updatedAt: DateTime.now(),
       );
 
-      bool success;
       if (_isEditing && _customerMasterData != null) {
-        // update existing customer
-        success = await mysqlService.updateCustomerDataByCustomerName(
+        // Update existing customer
+        await ApiService.updateCustomerByCustomerName(
           _customerMasterData!.customerName,
-          customerData,
+          customerData.toJson(),
         );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Customer updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.go('/cda_page', extra: 'customer');
+        }
       } else {
-        final existing = await mysqlService.getCustomerByCustomerName(
+        // Check if customer already exists for new customer
+        final existingCustomer = await ApiService.getCustomerByCustomerName(
           customerData.customerName,
         );
-        if (existing != null) {
+
+        if (existingCustomer != null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -122,22 +148,19 @@ class _CustomerMasterState extends State<CustomerMaster> {
           }
           return;
         }
-        success = await mysqlService.addCustomerMasterData(customerData);
-      }
 
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success
-                  ? (_isEditing ? 'Customer updated!' : 'Customer created!')
-                  : 'Failed to save customer',
+        // Create new customer
+        await ApiService.createCustomer(customerData.toJson());
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Customer created successfully!'),
+              backgroundColor: Colors.green,
             ),
-            backgroundColor: success ? Colors.green : Colors.red,
-          ),
-        );
-        if (!_isEditing) _resetForm();
-        if (_isEditing) context.go('/cda_page', extra: 'customer');
+          );
+          _resetForm();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -149,7 +172,9 @@ class _CustomerMasterState extends State<CustomerMaster> {
         );
       }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -190,7 +215,7 @@ class _CustomerMasterState extends State<CustomerMaster> {
               : 'CREATE NEW CUSTOMER',
         ),
         centerTitle: true,
-        backgroundColor: Color(0xFF1565C0), // Royal Blue
+        backgroundColor: const Color(0xFF1565C0), // Royal Blue
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/cda_page', extra: 'customer'),
@@ -287,7 +312,9 @@ class _CustomerMasterState extends State<CustomerMaster> {
                           height: 48,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF1565C0), // Royal Blue
+                              backgroundColor: const Color(
+                                0xFF1565C0,
+                              ), // Royal Blue
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -301,7 +328,7 @@ class _CustomerMasterState extends State<CustomerMaster> {
                                     _isEditing
                                         ? 'UPDATE CUSTOMER'
                                         : 'SAVE CUSTOMER',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,

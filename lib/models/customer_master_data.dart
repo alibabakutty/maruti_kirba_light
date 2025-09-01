@@ -1,4 +1,5 @@
 class CustomerMasterData {
+  final int? id;
   final String customerCode;
   final String customerName;
   final String? mobileNumber;
@@ -7,6 +8,7 @@ class CustomerMasterData {
   final DateTime? updatedAt;
 
   CustomerMasterData({
+    this.id,
     required this.customerCode,
     required this.customerName,
     this.mobileNumber,
@@ -16,32 +18,47 @@ class CustomerMasterData {
   });
 
   // convert data from MySql to customerName Master object
-  factory CustomerMasterData.fromFetchMySql(Map<String, dynamic> data) {
+  factory CustomerMasterData.fromJson(Map<String, dynamic> data) {
     return CustomerMasterData(
+      id: data['id'],
       customerCode: data['customer_code'] ?? '',
       customerName: data['customer_name'] ?? '',
       mobileNumber: data['mobile_number'] ?? '',
       email: data['email'] ?? '',
-      createdAt: data['created_at'] is DateTime
-          ? data['created_at']
-          : DateTime.parse(data['created_at'].toString()),
-      updatedAt: data['updated_at'] is DateTime
-          ? data['updated_at']
-          : DateTime.parse(data['updated_at'].toString()),
+      createdAt: _parseDateTime(data['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDateTime(data['updated_at']),
     );
   }
 
-  String? get id => null;
+  // Helper method to parse DateTime safely
+  static DateTime? _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) return null;
+
+    if (dateValue is DateTime) {
+      return dateValue;
+    }
+
+    try {
+      if (dateValue is String && dateValue.isNotEmpty) {
+        return DateTime.parse(dateValue);
+      }
+    } catch (e) {
+      print('Error parsing date: $dateValue, error: $e');
+    }
+
+    return null;
+  }
 
   // convert Customer master data object to MySql data
-  Map<String, dynamic> toStoreMySql() {
+  Map<String, dynamic> toJson() {
     return {
-      'customer_code': customerCode,
-      'customer_name': customerName,
-      if (mobileNumber != null) 'mobile_number': mobileNumber,
+      if (id != null) 'id': id,
+      'customerCode': customerCode,
+      'customerName': customerName,
+      if (mobileNumber != null) 'mobileNumber': mobileNumber,
       if (email != null) 'email': email,
-      'created_at': createdAt,
-      'updated_at': updatedAt,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 }

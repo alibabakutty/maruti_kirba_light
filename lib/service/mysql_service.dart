@@ -422,99 +422,99 @@ class MysqlService {
     }
   }
 
-  Future<CustomerMasterData?> getCustomerByCustomerName(
-    String customerName,
-  ) async {
-    if (!await _checkConnection()) return null;
+  // Future<CustomerMasterData?> getCustomerByCustomerName(
+  //   String customerName,
+  // ) async {
+  //   if (!await _checkConnection()) return null;
 
-    try {
-      final results = await _connection!
-          .query(
-            'SELECT * FROM customer_master_data WHERE customer_name = ? LIMIT 1',
-            [customerName],
-          )
-          .timeout(const Duration(seconds: 15));
+  //   try {
+  //     final results = await _connection!
+  //         .query(
+  //           'SELECT * FROM customer_master_data WHERE customer_name = ? LIMIT 1',
+  //           [customerName],
+  //         )
+  //         .timeout(const Duration(seconds: 15));
 
-      if (results.isNotEmpty) {
-        final row = results.first;
-        return CustomerMasterData.fromFetchMySql({
-          'customer_code': row['customer_code'],
-          'customer_name': row['customer_name'],
-          'mobile_number': row['mobile_number'],
-          'email': row['email'],
-          'created_at': _parseDateTime(row['created_at']),
-          'updated_at': _parseDateTime(row['updated_at']),
-        });
-      }
-      return null;
-    } on TimeoutException {
-      // ignore: avoid_print
-      print("Timeout fetching customer by name");
-      return null;
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error fetching customer by name: $e');
-      return null;
-    }
-  }
+  //     if (results.isNotEmpty) {
+  //       final row = results.first;
+  //       return CustomerMasterData.fromFetchMySql({
+  //         'customer_code': row['customer_code'],
+  //         'customer_name': row['customer_name'],
+  //         'mobile_number': row['mobile_number'],
+  //         'email': row['email'],
+  //         'created_at': _parseDateTime(row['created_at']),
+  //         'updated_at': _parseDateTime(row['updated_at']),
+  //       });
+  //     }
+  //     return null;
+  //   } on TimeoutException {
+  //     // ignore: avoid_print
+  //     print("Timeout fetching customer by name");
+  //     return null;
+  //   } catch (e) {
+  //     // ignore: avoid_print
+  //     print('Error fetching customer by name: $e');
+  //     return null;
+  //   }
+  // }
 
   // Fetch customer by mobile number
-  Future<CustomerMasterData?> getCustomerByMobileNumber(
-    String mobileNumber,
-  ) async {
-    try {
-      final results = await _connection!.query(
-        'SELECT * FROM customer_master_data WHERE mobile_number = ? LIMIT 1',
-        [mobileNumber],
-      );
+  // Future<CustomerMasterData?> getCustomerByMobileNumber(
+  //   String mobileNumber,
+  // ) async {
+  //   try {
+  //     final results = await _connection!.query(
+  //       'SELECT * FROM customer_master_data WHERE mobile_number = ? LIMIT 1',
+  //       [mobileNumber],
+  //     );
 
-      if (results.isNotEmpty) {
-        final row = results.first;
-        return CustomerMasterData.fromFetchMySql({
-          'customer_code': row['customer_code'],
-          'customer_name': row['customer_name'],
-          'mobile_number': row['mobile_number'],
-          'email': row['email'],
-          'created_at': _parseDateTime(row['created_at']),
-          'updated_at': _parseDateTime(row['updated_at']),
-        });
-      }
-      return null;
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error fetching customer by mobile: $e');
-      return null;
-    }
-  }
+  //     if (results.isNotEmpty) {
+  //       final row = results.first;
+  //       return CustomerMasterData.fromFetchMySql({
+  //         'customer_code': row['customer_code'],
+  //         'customer_name': row['customer_name'],
+  //         'mobile_number': row['mobile_number'],
+  //         'email': row['email'],
+  //         'created_at': _parseDateTime(row['created_at']),
+  //         'updated_at': _parseDateTime(row['updated_at']),
+  //       });
+  //     }
+  //     return null;
+  //   } catch (e) {
+  //     // ignore: avoid_print
+  //     print('Error fetching customer by mobile: $e');
+  //     return null;
+  //   }
+  // }
 
-  Future<List<CustomerMasterData>> getAllCustomers() async {
-    if (!await _checkConnection()) return [];
+  // Future<List<CustomerMasterData>> getAllCustomers() async {
+  //   if (!await _checkConnection()) return [];
 
-    try {
-      final results = await _connection!
-          .query('SELECT * FROM customer_master_data ORDER BY customer_name')
-          .timeout(const Duration(seconds: 15));
+  //   try {
+  //     final results = await _connection!
+  //         .query('SELECT * FROM customer_master_data ORDER BY customer_name')
+  //         .timeout(const Duration(seconds: 15));
 
-      return results.map((row) {
-        return CustomerMasterData.fromFetchMySql({
-          'customer_code': row['customer_code'],
-          'customer_name': row['customer_name'],
-          'mobile_number': row['mobile_number'],
-          'email': row['email'],
-          'created_at': _parseDateTime(row['created_at']),
-          'updated_at': _parseDateTime(row['updated_at']),
-        });
-      }).toList();
-    } on TimeoutException {
-      // ignore: avoid_print
-      print("Timeout fetching all customers");
-      return [];
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error fetching all customers: $e');
-      return [];
-    }
-  }
+  //     return results.map((row) {
+  //       return CustomerMasterData.fromFetchMySql({
+  //         'customer_code': row['customer_code'],
+  //         'customer_name': row['customer_name'],
+  //         'mobile_number': row['mobile_number'],
+  //         'email': row['email'],
+  //         'created_at': _parseDateTime(row['created_at']),
+  //         'updated_at': _parseDateTime(row['updated_at']),
+  //       });
+  //     }).toList();
+  //   } on TimeoutException {
+  //     // ignore: avoid_print
+  //     print("Timeout fetching all customers");
+  //     return [];
+  //   } catch (e) {
+  //     // ignore: avoid_print
+  //     print('Error fetching all customers: $e');
+  //     return [];
+  //   }
+  // }
 
   // Update customer by customer name
   Future<bool> updateCustomerDataByCustomerName(

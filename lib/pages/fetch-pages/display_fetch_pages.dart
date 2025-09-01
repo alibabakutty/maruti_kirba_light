@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maruti_kirba_lighting_solutions/models/customer_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/models/executive_master_data.dart';
 import 'package:maruti_kirba_lighting_solutions/models/item_master_data.dart';
+import 'package:maruti_kirba_lighting_solutions/service/api_service.dart';
 import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
 import 'package:provider/provider.dart';
 
@@ -104,11 +105,25 @@ class _DisplayFetchPageState extends State<DisplayFetchPage> {
 
   Future<void> _fetchCustomers() async {
     try {
-      final mysqlService = Provider.of<MysqlService>(context, listen: false);
-      final List<CustomerMasterData> customerList = await mysqlService
-          .getAllCustomers();
+      // Use ApiService to fetch customers
+      final data = await ApiService.getAllCustomers();
 
       if (!mounted) return;
+
+      // Convert API response to List<CustomerMasterData> objects
+      final List<CustomerMasterData>
+      customerList = data.map<CustomerMasterData>((custData) {
+        // Map camelCase API fields to snake_case fields expected by fromJson
+        return CustomerMasterData.fromJson({
+          'id': custData['id'],
+          'customer_code': custData['customerCode'],
+          'customer_name': custData['customerName'],
+          'mobile_number': custData['mobileNumber'],
+          'email': custData['email'],
+          'created_at': custData['createdAt'],
+          'updated_at': custData['updatedAt'],
+        });
+      }).toList();
 
       setState(() {
         customers = customerList;

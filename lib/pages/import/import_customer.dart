@@ -2,8 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:maruti_kirba_lighting_solutions/models/customer_master_data.dart';
-import 'package:maruti_kirba_lighting_solutions/service/mysql_service.dart';
+import 'package:maruti_kirba_lighting_solutions/service/api_service.dart';
 import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 
 class ImportCustomer extends StatefulWidget {
@@ -19,23 +18,8 @@ class _ImportCustomerState extends State<ImportCustomer> {
   bool _hasError = false;
   int _successCount = 0;
   int _errorCount = 0;
-  final MysqlService _mysqlService = MysqlService();
   String? _fileName;
-
-  @override
-  void initState() {
-    super.initState();
-    // Ensure MySql Service is initialized
-    _initializeMysqlService();
-  }
-
-  Future<void> _initializeMysqlService() async {
-    try {
-      await _mysqlService.initialize();
-    } catch (e) {
-      debugPrint('MySQL initialization error: $e');
-    }
-  }
+  List<Map<String, dynamic>> _failedRecords = [];
 
   Future<void> _importData() async {
     setState(() {
@@ -45,6 +29,7 @@ class _ImportCustomerState extends State<ImportCustomer> {
       _successCount = 0;
       _errorCount = 0;
       _fileName = null;
+      _failedRecords.clear();
     });
 
     try {
@@ -102,12 +87,12 @@ class _ImportCustomerState extends State<ImportCustomer> {
         return;
       }
 
-      // Get headers (first row) and convert to lowercase for case-insensitive matching
+      // Get headers
       final headers = table.rows[0]
           .map((e) => e?.toString().toLowerCase().trim() ?? '')
           .toList();
 
-      // Find column indexes - only Customer Code and Name are required
+      // Find column indexes
       int? codeCol, nameCol, mobileCol, emailCol, dateCol;
 
       for (int i = 0; i < headers.length; i++) {
@@ -126,7 +111,7 @@ class _ImportCustomerState extends State<ImportCustomer> {
         }
       }
 
-      // Validate required columns exist
+      // Validate required columns
       if (codeCol == null || nameCol == null) {
         setState(() {
           _isLoading = false;
@@ -138,7 +123,7 @@ class _ImportCustomerState extends State<ImportCustomer> {
         return;
       }
 
-      // Process each row individually instead of using batch
+      // Process each row
       for (int i = 1; i < table.rows.length; i++) {
         try {
           final row = table.rows[i];
@@ -151,13 +136,19 @@ class _ImportCustomerState extends State<ImportCustomer> {
             continue;
           }
 
-          // Get values - only code and name are required
+          // Get values
           final customerCode = _parseString(row[codeCol]);
           final customerName = _parseString(row[nameCol]);
 
           // Skip if required fields are empty
           if (customerCode.isEmpty || customerName.isEmpty) {
             _errorCount++;
+            _failedRecords.add({
+              'row': i + 1,
+              'customerCode': customerCode,
+              'customerName': customerName,
+              'error': 'Missing required fields',
+            });
             continue;
           }
 
@@ -175,46 +166,73 @@ class _ImportCustomerState extends State<ImportCustomer> {
               ? _parseDateTime(row[dateCol].toString())
               : DateTime.now();
 
-          final customer = CustomerMasterData(
-            customerCode: customerCode,
-            customerName: customerName,
-            mobileNumber: mobileNumber?.isNotEmpty == true
-                ? mobileNumber
-                : null,
-            email: email?.isNotEmpty == true ? email : null,
-            createdAt: createdAt,
-          );
+          // Prepare data for API
+          final customerData = {
+            'customerCode': customerCode,
+            'customerName': customerName,
+            if (mobileNumber != null && mobileNumber.isNotEmpty)
+              'mobileNumber': mobileNumber,
+            if (email != null && email.isNotEmpty) 'email': email,
+            'createdAt': createdAt.toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          };
 
-          // Add to MySQL database
-          final success = await _mysqlService.addCustomerMasterData(customer);
+          // Call API to create customer
+          try {
+            final response = await ApiService.createCustomer(customerData);
 
-          if (success) {
-            _successCount++;
-          } else {
+            if (response != null) {
+              _successCount++;
+              debugPrint('Successfully created customer: $customerName');
+            } else {
+              throw Exception('Null response from API');
+            }
+          } catch (e) {
             _errorCount++;
+            _failedRecords.add({
+              'row': i + 1,
+              'customerCode': customerCode,
+              'customerName': customerName,
+              'error': e.toString(),
+            });
+            debugPrint('Failed to create customer $customerName: $e');
           }
 
           // Update progress
-          if (i % 10 == 0 || i == table.rows.length - 1) {
+          if (i % 5 == 0 || i == table.rows.length - 1) {
             setState(() {
-              _statusMessage = 'Processing row $i/${table.rows.length - 1}...';
+              _statusMessage =
+                  'Processing row $i/${table.rows.length - 1}\n'
+                  'Successful: $_successCount, Failed: $_errorCount';
             });
-            await Future.delayed(const Duration(milliseconds: 1));
+            // Small delay to prevent UI freezing
+            await Future.delayed(const Duration(milliseconds: 50));
           }
         } catch (e) {
-          debugPrint('Error processing row $i: $e');
           _errorCount++;
+          debugPrint('Error processing row $i: $e');
         }
       }
 
       setState(() {
         _isLoading = false;
         _statusMessage =
-            '''
-Import completed!
-Successful: $_successCount
-Failed: $_errorCount
-Total processed: ${table.rows.length - 1}''';
+            'Import completed!\n'
+            'Successful: $_successCount\n'
+            'Failed: $_errorCount\n'
+            'Total processed: ${table.rows.length - 1}';
+
+        if (_failedRecords.isNotEmpty) {
+          _statusMessage += '\n\nFailed records:';
+          for (var record in _failedRecords.take(5)) {
+            _statusMessage +=
+                '\nRow ${record['row']}: ${record['customerName']} - ${record['error']}';
+          }
+          if (_failedRecords.length > 5) {
+            _statusMessage += '\n...and ${_failedRecords.length - 5} more';
+          }
+        }
+
         _hasError = _errorCount > 0;
       });
     } catch (e) {
@@ -235,9 +253,6 @@ Total processed: ${table.rows.length - 1}''';
         DateFormat('yyyy-MM-dd'),
         DateFormat('dd-MM-yyyy'),
         DateFormat('yyyy/MM/dd'),
-        DateFormat('dd/MM/yyyy HH:mm:ss'),
-        DateFormat('MM/dd/yyyy HH:mm:ss'),
-        DateFormat('yyyy-MM-dd HH:mm:ss'),
       ];
 
       for (final format in formats) {
@@ -252,6 +267,37 @@ Total processed: ${table.rows.length - 1}''';
   }
 
   String _parseString(dynamic value) => value?.toString().trim() ?? '';
+
+  void _showFailedRecords() {
+    if (_failedRecords.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Failed Records (${_failedRecords.length})'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _failedRecords.length,
+            itemBuilder: (context, index) {
+              final record = _failedRecords[index];
+              return ListTile(
+                title: Text('Row ${record['row']}: ${record['customerName']}'),
+                subtitle: Text('Error: ${record['error']}'),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +317,7 @@ Total processed: ${table.rows.length - 1}''';
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Instructions Card (same as before)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -286,7 +333,7 @@ Total processed: ${table.rows.length - 1}''';
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      '1. Prepare an Excel file with the following columns in order:',
+                      '1. Prepare an Excel file with the following columns:',
                     ),
                     const SizedBox(height: 8),
                     const Padding(
@@ -303,9 +350,7 @@ Total processed: ${table.rows.length - 1}''';
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      '2. The first row should be headers (will be skipped)',
-                    ),
+                    const Text('2. The first row should be headers'),
                     const SizedBox(height: 10),
                     Text(
                       _fileName != null
@@ -320,7 +365,9 @@ Total processed: ${table.rows.length - 1}''';
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
+
             Center(
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.upload_file),
@@ -334,7 +381,9 @@ Total processed: ${table.rows.length - 1}''';
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
+
             if (_statusMessage.isNotEmpty)
               Card(
                 color: _hasError ? Colors.red[50] : Colors.green[50],
@@ -343,7 +392,7 @@ Total processed: ${table.rows.length - 1}''';
                   child: Column(
                     children: [
                       Text(
-                        _hasError ? 'Import Status (Errors)' : 'Import Status',
+                        _hasError ? 'Import Status' : 'Import Status',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: _hasError
@@ -359,8 +408,15 @@ Total processed: ${table.rows.length - 1}''';
                               ? Colors.red[800]
                               : Colors.green[800],
                         ),
-                        textAlign: TextAlign.center,
                       ),
+                      if (_failedRecords.isNotEmpty)
+                        TextButton(
+                          onPressed: _showFailedRecords,
+                          child: Text(
+                            'View ${_failedRecords.length} failed records',
+                            style: const TextStyle(color: Colors.blue),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -371,4 +427,3 @@ Total processed: ${table.rows.length - 1}''';
     );
   }
 }
-
